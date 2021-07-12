@@ -1,0 +1,6 @@
+World-Size: 30 //Numbers of chunks horizontally and vertically
+AO: true //Looks good but is slow!
+Fullscreen : true
+Sensitivity: 10
+Creative: false // Have fun and fly around
+Structure-Rarity: 120 //Zero to disable
