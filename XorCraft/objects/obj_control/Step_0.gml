@@ -1,4 +1,4 @@
-///@desc
+///@desc Update
 
 var _mx,_my,_cx,_cy;
 _cx = window_get_width()/2;
@@ -6,6 +6,7 @@ _cy = window_get_height()/2;
 _mx = window_mouse_get_x()-_cx;
 _my = window_mouse_get_y()-_cy;
 
+//Turn if the inventory is not open
 if !inventory_open
 {
 	window_mouse_set(_cx,_cy);
@@ -14,12 +15,14 @@ if !inventory_open
 	dy = clamp(dy-_my/80*global.sensitivity,-89,89);
 }
 
+//Escape to end the game
 if keyboard_check_pressed(vk_escape)
 {
 	if (inventory_open) inventory_open = false;
 	else game_end();
 }
 
+//Controls
 var _kf,_ks,_kv,_kb,_kj;
 _kf = (keyboard_check(ord("D")) || keyboard_check(vk_right)) - (keyboard_check(ord("A")) || keyboard_check(vk_left));
 _ks = (keyboard_check(ord("W")) || keyboard_check(vk_up)) - (keyboard_check(ord("S")) || keyboard_check(vk_down));
@@ -37,6 +40,7 @@ X = floor(x);
 Y = floor(y);
 Z = floor(z);
 
+//Rough collision system
 for(var I = 0; I<=1;I++)
 {
 	if voxel_get(floor(x+vx+.5),Y,Z-I) {vx = min(vx,0); x = min(x,floor(x+1))}
@@ -50,14 +54,16 @@ for(var I = 0; I<=1;I++)
 x += vx;
 y += vy;
 z += vz;
+
 //Magic floor
-vz = max(vz,2-z);
-z = max(z,2);
+vz = max(vz,3-z);
+z = max(z,3);
 
 X = x;
 Y = y;
 Z = z;
 
+//View direction
 var _dx,_dy,_dz;
 _dx = +dcos(dx)*dcos(dy);
 _dy = -dsin(dx)*dcos(dy);
@@ -107,6 +113,7 @@ for(;i<24;i++)
 		Y += _dy*_tz;
 		Z += _dz*_tz;
 	}*/
+	//Step 1/3 of a block
 	X += _dx/3;
 	Y += _dy/3;
 	Z += _dz/3;
@@ -114,6 +121,8 @@ for(;i<24;i++)
 	SX = floor(X);
 	SY = floor(Y);
 	SZ = floor(Z);
+	
+	//Stop when you hit a block
 	if voxel_get(SX,SY,SZ) 
 	{
 		SH = 1;
@@ -126,7 +135,9 @@ for(;i<24;i++)
 }
 
 
+//Update inventory + animation
 inventory_anim = lerp(inventory_anim,inventory_open,.1);
+
 if keyboard_check_pressed(ord("E"))
 {
 	inventory_open = !inventory_open;
@@ -135,6 +146,7 @@ if keyboard_check_pressed(ord("E"))
 	window_set_cursor(inventory_open? cr_default: cr_cross)
 }
 
+//Update selection.
 select = (select-mouse_wheel_up()+mouse_wheel_down()+9)%9;
 if keyboard_check(ord("1")) select = 0;
 if keyboard_check(ord("2")) select = 1;
@@ -146,13 +158,16 @@ if keyboard_check(ord("7")) select = 6;
 if keyboard_check(ord("8")) select = 7;
 if keyboard_check(ord("9")) select = 8;
 
-//no clicky
+//Block placement/breaking
 if !inventory_open
 {
-	if mouse_check_button_pressed(mb_right) && (i>2.5-_dz) && SH
+	//Place if far enough (and if selector hit a block)
+	if mouse_check_button_pressed(mb_right) && (i>2.8-_dz) && SH
 	{
+		//Check if you have a block to place
 		if (ds_list_size(inventory_i)>select) && inventory_q[|select] || global.creative
 		{
+			//Place
 			var snd = audio_play_sound(snd_place,0,0);
 			audio_sound_pitch(snd,random(.6)+.7);
 		
@@ -160,12 +175,14 @@ if !inventory_open
 			if !global.creative inventory_q[|select]--
 		}
 	}
+	//Break block
 	if mouse_check_button_pressed(mb_left)
 	{
 		var snd = audio_play_sound(snd_break,0,0);
 		audio_sound_pitch(snd,random(.6)+.7);
 	
 		var B = voxel_set(SX,SY,SZ,0,1);
+		//Add broken block to inventory
 		if B
 		{
 			var pos = ds_list_find_index(inventory_i,B-1);
@@ -178,6 +195,7 @@ if !inventory_open
 		}
 	}
 }
+//Toggles:
 
 if keyboard_check_pressed(vk_f1)
 {
@@ -189,4 +207,5 @@ if keyboard_check_pressed(vk_f2)
 	hide = !hide;
 }
 
+//Update chunks
 gen_chunks();

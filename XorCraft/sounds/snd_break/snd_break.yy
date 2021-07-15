@@ -11,7 +11,7 @@
     "path": "audiogroups/audiogroup_default",
   },
   "soundFile": "snd_break.ogg",
-  "duration": 1.755,
+  "duration": 1.75,
   "parent": {
     "name": "Sounds",
     "path": "folders/Sounds.yy",

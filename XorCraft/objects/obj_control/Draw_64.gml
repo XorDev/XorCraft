@@ -10,6 +10,7 @@ var _my = window_mouse_get_y();
 gpu_set_cullmode(cull_noculling);
 gpu_set_ztestenable(0);
 
+//Inventory/hotbar background
 draw_set_alpha(.2+.4*inventory_anim);
 draw_roundrect_color_ext(_w/2-96*4-64,_h-96-64-inventory_anim*96*4,_w/2+96*4+64,_h-96+64,16,16,$444444,0,0);
 var _x,_y,_cx,_cy;
@@ -22,15 +23,18 @@ _y += _cy*96*inventory_anim;
 draw_roundrect(_x-48,_y-48,_x+48,_y+48,0);
 draw_set_alpha(1);
 
+
 var I = (_cx-_cy*9);
+//Drag items
 if  inventory_open && mouse_check_button_pressed(mb_left)
 {
 	if (I<ds_list_size(inventory_i))
 	inventory_item = _cx-_cy*9;
 }
-
+//Release items
 if  mouse_check_button_released(mb_left)
 {
+	//If the slot is available, swap it
 	if (I<ds_list_size(inventory_i))
 	{
 		var _I = inventory_i[|I];
@@ -45,6 +49,7 @@ if  mouse_check_button_released(mb_left)
 	inventory_item = -1;
 }
 
+//Draw items/quantities.
 for(var I = 0;I<ds_list_size(inventory_i);I++)
 {
 	if !inventory_open && I>=9 break;

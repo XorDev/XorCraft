@@ -1,10 +1,12 @@
-///@desc
+///@desc Initialize
 
+//Randomize seed
 randomize();
 
 //Max number of microseconds to be spent on a chunk.
 #macro MICROSECONDS 12000
 
+//Set AA as high as possible
 aa = max(display_aa&2,display_aa&4,display_aa&8);
 display_reset(aa,0);
 
@@ -13,7 +15,7 @@ draw_set_font(fnt_main);
 debug = 0;
 hide = 0;
 
-//Formats
+#region Formats
 vertex_format_begin();
 vertex_format_add_position_3d();
 vertex_format_add_custom(vertex_type_float3,vertex_usage_texcoord);
@@ -22,13 +24,14 @@ format = vertex_format_end();
 vertex_format_begin();
 vertex_format_add_position_3d();
 format_pos = vertex_format_end();
+#endregion
 
 //Chunk variables
 num = global.world_size;
 size = 8;
 height = 32;
 
-//Chunk data
+//Chunk data, x/y position, vertex buffer and chunk id
 chunks = ds_list_create();
 chunk_x = ds_list_create();
 chunk_y = ds_list_create();
@@ -38,7 +41,7 @@ chunk_b = ds_list_create();
 for(var X = 0;X<num;X++)
 for(var Y = 0;Y<num;Y++)
 {
-	chunk_g[X][Y] = -1;
+	chunk_g[X][Y] = -1;//Not set yet
 }
 
 //Updating chunks
@@ -56,13 +59,17 @@ SY = 0;
 SZ = 0;
 SH = 0;
 
+//Generation terrain at chunk x/y
 function gen_terrain(CX,CY)
 {
+	//Check if chunk has been already generated.
 	if chunk_g[CX][CY]<0
 	{
+		//Chunk id
 		var CI = ds_list_size(chunks);
 		chunk_g[CX][CY] = CI;
 		
+		//Fill with blank data.
 		var blank_array = array_create(size,0);
 		for(var X = 0;X<size;X++)
 		{
@@ -72,29 +79,36 @@ function gen_terrain(CX,CY)
 				blank_array[X][Y] = array_create(size,0);
 			}
 		}
-		
+		//Add chunks
 		ds_list_add(chunks,blank_array);
 		ds_list_add(chunk_x,CX*size);
 		ds_list_add(chunk_y,CY*size);
 		ds_list_add(chunk_b,-1);
 	
+		//Block column x/y
 		for(var X = 0;X<size;X++)
 		for(var Y = 0;Y<size;Y++)
 		{
+			//World X?Y
 			var _X,_Y;
 			_X = X+CX*size;
 			_Y = Y+CY*size;
+			//Terrain smoothness
 			var smooth = sin(_X*.034)*cos(_Y*.045)*.5+.5;
+			//Terrain height (one normal, one extra dense)
 			var height1 = (cos(_X*.131)*sin(_Y*.112)*.2+cos(_X/4.3)*sin(_Y/5.1)*.1)*smooth+.4;
 			var height2 = sin(_X*.022)*sin(_Y*.023)*1.6+sin(_X/9.1)*sin(_Y/6.7)*1.2-2;
 			var h = floor(max(height1,height2)*height);
 			var treasure = -1;
-			if !irandom(100) treasure = irandom(h/2);
+			//Chance of treasure (ore)
+			if !irandom(60) treasure = irandom(h/2);
 		
+			//Fill column
 			for(var Z = 0;Z<height;Z++)
 			{
 				var v = clamp(h-Z,0,4);
 				v += v && height1<height2;
+				//Add treasure
 				if (Z == treasure) v = choose(9,9,9,9,10);
 				chunks[|CI][X][Y][Z] = v;
 			}
@@ -105,6 +119,7 @@ function gen_terrain(CX,CY)
 	else return -1;
 }
 
+//Various voxel fill scripts:
 function gen_line(X,Y,Z1,Z2,B,I)
 {
 	for(var Z = Z1; Z<=Z2; Z++)
@@ -137,6 +152,7 @@ function gen_cubiod(X1,X2,Y1,Y2,Z1,Z2,B,I)
 	}
 }
 
+//Check voxel at X/Y/Z
 function voxel_get(X,Y,Z)
 {
 	var CX,CY,CI;
@@ -157,6 +173,7 @@ function voxel_get(X,Y,Z)
 	else return 0;
 }
 
+//Set voxel value at X/Y/Z (and update chunk?)
 function voxel_set(X,Y,Z,value,update)
 {
 	var CX,CY,CI;
@@ -205,6 +222,7 @@ function voxel_set(X,Y,Z,value,update)
 	else return 0;
 }
 
+//Generate plane vertex buffer (used for clouds)
 function gen_plane_buff(buff,S,Z)
 {	
 	vertex_position_3d(buff,-S,-S,Z);
@@ -221,6 +239,7 @@ function gen_plane_buff(buff,S,Z)
 	vertex_float3(buff,0,1,0);
 }
 
+//Generate basic cube (for cursor)
 function gen_cube_base(buff)
 {
 	var X,Y,Z,b,l;
@@ -314,12 +333,15 @@ function gen_cube_base(buff)
 	vertex_float3(buff,b,0,l);
 }
 
+//Generate voxel at X,Y,Z
 function gen_cube(buff,X,Y,Z,I,shadow)
 {
 	X += chunk_x[|I];
 	Y += chunk_y[|I];
 	
 	var b = voxel_get(X,Y,Z);
+	
+	//Skip if there's no voxel
 	if !b 
 	{
 		return 0;	
@@ -331,6 +353,7 @@ function gen_cube(buff,X,Y,Z,I,shadow)
 	//beautiful code:
 	var C = [[[1,1,1],[1,1,1],[1,1,1]],[[1,1,1],[1,1,1],[1,1,1]],[[1,1,1],[1,1,1],[1,1,1]]];
 	
+	//AO is enabled, check all neighboring voxels (there's probably a faster way)
 	if global.AO
 	{
 		for(var _X = -1;_X<=1;_X++)
@@ -340,6 +363,7 @@ function gen_cube(buff,X,Y,Z,I,shadow)
 			C[_X+1][_Y+1][_Z+1] = .5+.5*!voxel_get(X+_X,Y+_Y,Z+_Z);	
 		}
 	}
+	//Add quads:
 	
 	//z0
 	if  !voxel_get(X,Y,Z-1)
@@ -482,11 +506,15 @@ function gen_cube(buff,X,Y,Z,I,shadow)
 	return 1;
 }
 
+//Updates chunks every step.
 function gen_chunks()
 {
+	//If there are chunks to update
 	if ds_list_size(update_list)
 	{
+		//First chunk in list
 		var I = update_list[|0];
+		//Start vertex buffer on the first block
 		if (UB==0)
 		{
 			//if (update_chunk >= 0) 
@@ -494,23 +522,29 @@ function gen_chunks()
 		}
 	
 		var start = get_timer();
+		//Iterate through all blocks
 		while(UB<size*size*height)
-		{	
+		{
+			//Reset shadow value for each column.
 			var shadow = 0;
 			repeat(height)
 			{
 				shadow = max(shadow*.9,gen_cube(update_chunk,(UB div height) % size,(UB div (height*size)) % size,height-(UB%height),I,shadow));
 				UB++;
 			}
+			//Break if taking too long (continues next frame)
 			if (get_timer()-start) > MICROSECONDS break;
 		}
-		
+		//If you're at the last block
 		if (UB>=size*size*height)
 		{
+			//Reset counter
 			UB = 0;
+			//Finish vertex buffer
 			vertex_end(update_chunk);
 			vertex_freeze(update_chunk);
 			
+			//Delete old chunk buffer and replace it.
 			if (chunk_b[|I]>=0) vertex_delete_buffer(chunk_b[|I]);
 			chunk_b[|I] = update_chunk;
 			//Create new buffer.
@@ -518,27 +552,31 @@ function gen_chunks()
 			ds_list_delete(update_list,0);
 		}
 	}
+	//If there's nothing on the update list, look for some
 	else
 	{
 		var dist = infinity;
 		var pick = -1;
-		//Check near by chunks (please don't judge)
-		repeat(300)
+		//Check nearby chunks (please don't judge)
+		repeat(90)
 		{
 			var I,D;
+			//Find a random chunk and check it's distance
 			I = irandom(ds_list_size(chunk_b)-1);
-			D = point_distance(x-size/2,y-size/2,chunk_x[|I],chunk_y[|I]);;
+			D = point_distance(x-size/2,y-size/2,chunk_x[|I],chunk_y[|I]);
+			//If it's closer than last one, save it.
 			if (chunk_b[|I]<0 && D<dist) 
 			{
 				dist = D
 				pick = I;
 			}
 		}
+		//Add the nearest pick to the list.
 		if (pick>=0) ds_list_add(update_list,pick);
 	}
 }
 
-//Generate world
+//Generate world (adding trees, rocks and structures)
 for(var X = 0;X<num;X++)
 for(var Y = 0;Y<num;Y++)
 {
@@ -585,12 +623,13 @@ for(var Y = 0;Y<num;Y++)
 		gen_cubiod(1,_w-1,1,_d-1,12,_h,0,CI);
 		gen_cubiod(1,_w-1,1,_d-1,0,12,11,CI);
 	}
-	
+	/*
 	if (CI>=0)
 	{
 		var _size = ds_list_size(update_list);
 		ds_list_insert(update_list,min(floor(sqrt(X*X+Y*Y)),_size-1),CI);
 	}
+	*/
 }
 
 
