@@ -1,3 +1,0 @@
-///@desc
-
-game_end();

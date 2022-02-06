@@ -12,7 +12,6 @@ display_reset(aa,0);
 
 draw_set_font(fnt_main);
 
-debug = 0;
 hide = 0;
 
 #region Formats

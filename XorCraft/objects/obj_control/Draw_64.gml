@@ -10,6 +10,8 @@ var _my = window_mouse_get_y();
 gpu_set_cullmode(cull_noculling);
 gpu_set_ztestenable(0);
 
+draw_text(0, 0, "FPS: " + string(fps));
+
 //Inventory/hotbar background
 draw_set_alpha(.2+.4*inventory_anim);
 draw_roundrect_color_ext(_w/2-96*4-64,_h-96-64-inventory_anim*96*4,_w/2+96*4+64,_h-96+64,16,16,$444444,0,0);
@@ -74,3 +76,5 @@ for(var I = 0;I<ds_list_size(inventory_i);I++)
 	}
 	if _Q draw_text(_x,_y,_Q);
 }
+
+draw_sprite(spr_cursor, 0, window_mouse_get_x(), window_mouse_get_y());
